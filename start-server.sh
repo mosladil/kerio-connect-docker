@@ -2,5 +2,4 @@
 
 . common.sh
 
-printBanner
 startMappedContainer

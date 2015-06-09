@@ -16,17 +16,26 @@ function printBanner {
 
 function buildContainer {
 	echo "Starting build..."
-	docker build -t ${CONNECT_NAME}:${CONNECT_VERSION}.${CONNECT_BUILD} .
+	docker build -t ${IMAGE} .
 }
 
 function removeContainer {
-	echo "Cleaning builded image..."
-	docker rmi -f ${IMAGE} &>/dev/null
+	readYes "Remove container"
+	YES=$?
+
+	if [ ${YES} == 0 ]; then
+		echo "Cleaning builded image..."
+		docker rmi -f ${IMAGE} &>/dev/null
+	else
+		exit 1
+	fi
 }
 
 function removeStore {
-	read -r -p "Do you really want to remove store, license and settings? [y/N] " response
- 	if [[ $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
+	readYes "Remove store, license and settings"
+	YES=$?
+
+	if [ ${YES} == 0 ]; then
  		echo "Cleaning store and settings..."
 		rm -rf ${THIS_HOME}/data/*
 		for DIR in ${THIS_HOME}/data/dbSSL ${THIS_HOME}/data/license ${THIS_HOME}/data/settings ${THIS_HOME}/data/sslcert ${THIS_HOME}/data/store; do
@@ -64,7 +73,7 @@ function startMappedContainer {
 
 	docker run -d ${PORTS} \
 		-v ${THIS_HOME}/data:/data \
-		${IMAGE} &>/dev/null
+		${IMAGE} &> /dev/null
 
 	if [ "$?" == 0 ]; then
 		echo "done!"
@@ -78,7 +87,7 @@ function startMappedContainer {
 function startContainer {
 	echo -n "Starting new container..."
 	checkContainer
-	docker run -d -P ${IMAGE} &>/dev/null
+	docker run -d -P ${IMAGE} &> /dev/null
 }
 
 function stopContainer {
@@ -90,7 +99,7 @@ function stopContainer {
 	fi
 
 	echo -n "Stopping CONTAINER_ID=${CONTAINER_ID}..."
-	docker stop ${CONTAINER_ID} &>/dev/null
+	docker stop ${CONTAINER_ID} &> /dev/null
 	[ "$?" == 0 ] && echo "done!" || "failed!"
 }
 
@@ -126,7 +135,7 @@ function waitForAdministration {
 	echo -n "	"
 	STARTING=true
 	while ${STARTING}; do
-		nc -w 1 $(echo ${DOCKER_MACHINE} | cut -f3 -d/) ${ADMIN_PORT} &>/dev/null
+		nc -w 1 $(echo ${DOCKER_MACHINE} | cut -f3 -d/) ${ADMIN_PORT} &> /dev/null
 		if [ "$?" == 0 ]; then
 			STARTING=false
 			echo "done!"
@@ -142,12 +151,24 @@ function checkDockerExecutables {
 	commandExists docker-machine
 }
 
-function commandExists () {
-	type "$1" &> /dev/null ;
+function checkExecutables {
+	commandExists nc
+	checkDockerExecutables
+}
+
+function commandExists {
+	type "$1" &> /dev/null
 	if [ "$?" == 1 ]; then
 		echo "Missing command $1. Please, install it first!"
 		exit 1
 	fi
 }
 
-checkDockerExecutables
+function readYes {
+	MESSAGE=$1
+	read -r -p "${MESSAGE}? [y/N] " RESPONSE
+ 	[[ ${RESPONSE} =~ ^([yY][eE][sS]|[yY])$ ]] && return 0 || return 1
+}
+
+checkExecutables
+printBanner
