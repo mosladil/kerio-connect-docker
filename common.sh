@@ -146,6 +146,14 @@ function waitForAdministration {
 	done
 }
 
+function checkRequirements {
+	fileExists Dockerfile
+	fileExists config/supervisord.conf
+
+	checkExecutables
+	checkDockerExecutables
+}
+
 function checkDockerExecutables {
 	commandExists docker
 	commandExists docker-machine
@@ -153,7 +161,6 @@ function checkDockerExecutables {
 
 function checkExecutables {
 	commandExists nc
-	checkDockerExecutables
 }
 
 function commandExists {
@@ -164,11 +171,18 @@ function commandExists {
 	fi
 }
 
+function fileExists {
+	if [ ! -f "$1" ]; then
+		echo "File $1 not found!"
+		exit 1
+	fi	
+}
+
 function readYes {
 	MESSAGE=$1
 	read -r -p "${MESSAGE}? [y/N] " RESPONSE
  	[[ ${RESPONSE} =~ ^([yY][eE][sS]|[yY])$ ]] && return 0 || return 1
 }
 
-checkExecutables
+checkRequirements
 printBanner
