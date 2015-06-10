@@ -118,24 +118,24 @@ function showContainerInfo {
 		echo "	${PORT}"
 	done < <(docker port ${CONTAINER_ID})
 
-	echo "Server started and listening on:"
+	if [ ! -z $DOCKER_HOST ]; then
+		DOCKER_IP=$(echo ${DOCKER_HOST} | cut -d/ -f3 | cut -d: -f1)
+	else
+		DOCKER_IP="localhost"
+	fi
+	waitForAdministration
+
+	echo "To enter console, type:"
 	echo "	docker exec -ti ${CONTAINER_ID} bash"
 
-	DOCKER_MACHINE=$(docker-machine url | cut -f2 -d:)
-	if [ ! -z ${DOCKER_MACHINE} ]; then
-		echo "	http:${DOCKER_MACHINE}:${ADMIN_PORT}/admin"
-	fi
-	
-	waitForAdministration
-	echo ""
 }
 
 function waitForAdministration {
 	echo "Waiting for server comming live:"
-	echo -n "	"
+	echo -n "	http://${DOCKER_IP}:${ADMIN_PORT}/admin "
 	STARTING=true
 	while ${STARTING}; do
-		nc -w 1 $(echo ${DOCKER_MACHINE} | cut -f3 -d/) ${ADMIN_PORT} &> /dev/null
+		nc -w 1 ${DOCKER_IP} ${ADMIN_PORT} &> /dev/null
 		if [ "$?" == 0 ]; then
 			STARTING=false
 			echo "done!"
@@ -144,6 +144,7 @@ function waitForAdministration {
 			sleep 1
 		fi
 	done
+
 }
 
 function checkRequirements {
@@ -156,7 +157,6 @@ function checkRequirements {
 
 function checkDockerExecutables {
 	commandExists docker
-	commandExists docker-machine
 }
 
 function checkExecutables {
