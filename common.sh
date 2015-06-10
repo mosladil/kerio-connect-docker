@@ -25,7 +25,7 @@ function removeContainer {
 
 	if [ ${YES} == 0 ]; then
 		echo "Cleaning builded image..."
-		docker rmi -f ${IMAGE} &>/dev/null
+		execute "docker rmi -f ${IMAGE}"
 	else
 		exit 1
 	fi
@@ -37,10 +37,10 @@ function removeStore {
 
 	if [ ${YES} == 0 ]; then
  		echo "Cleaning store and settings..."
-		rm -rf ${THIS_HOME}/data/*
+		execute "rm -rf ${THIS_HOME}/data/*"
 		for DIR in ${THIS_HOME}/data/dbSSL ${THIS_HOME}/data/license ${THIS_HOME}/data/settings ${THIS_HOME}/data/sslcert ${THIS_HOME}/data/store; do
-			mkdir -p ${DIR}
-			touch ${DIR}/.empty
+			execute "mkdir -p ${DIR}"
+			execute "touch ${DIR}/.empty"
 		done
 	fi
 }
@@ -71,9 +71,9 @@ function startMappedContainer {
 		PORTS="${PORTS}-p ${PORT}:${PORT} "
 	done
 
-	docker run -d ${PORTS} \
+	execute "docker run -d ${PORTS} \
 		-v ${THIS_HOME}/data:/data \
-		${IMAGE} &> /dev/null
+		${IMAGE}"
 
 	if [ "$?" == 0 ]; then
 		echo "done!"
@@ -87,7 +87,7 @@ function startMappedContainer {
 function startContainer {
 	echo -n "Starting new container..."
 	checkContainer
-	docker run -d -P ${IMAGE} &> /dev/null
+	execute "docker run -d -P ${IMAGE}"
 }
 
 function stopContainer {
@@ -99,7 +99,7 @@ function stopContainer {
 	fi
 
 	echo -n "Stopping CONTAINER_ID=${CONTAINER_ID}..."
-	docker stop ${CONTAINER_ID} &> /dev/null
+	execute "docker stop ${CONTAINER_ID}"
 	[ "$?" == 0 ] && echo "done!" || "failed!"
 }
 
@@ -135,7 +135,7 @@ function waitForAdministration {
 	echo -n "	http://${DOCKER_IP}:${ADMIN_PORT}/admin "
 	STARTING=true
 	while ${STARTING}; do
-		nc -w 1 ${DOCKER_IP} ${ADMIN_PORT} &> /dev/null
+		execute "nc -w 1 ${DOCKER_IP} ${ADMIN_PORT}"
 		if [ "$?" == 0 ]; then
 			STARTING=false
 			echo "done!"
@@ -164,16 +164,16 @@ function checkExecutables {
 }
 
 function commandExists {
-	type "$1" &> /dev/null
+	execute "type $1"
 	if [ "$?" == 1 ]; then
-		echo "Missing command $1. Please, install it first!"
+		echo "Command '$1' not found!"
 		exit 1
 	fi
 }
 
 function fileExists {
 	if [ ! -f "$1" ]; then
-		echo "File $1 not found!"
+		echo "Cannot open '$1' (No such file or directory)"
 		exit 1
 	fi	
 }
@@ -182,6 +182,10 @@ function readYes {
 	MESSAGE=$1
 	read -r -p "${MESSAGE}? [y/N] " RESPONSE
  	[[ ${RESPONSE} =~ ^([yY][eE][sS]|[yY])$ ]] && return 0 || return 1
+}
+
+function execute {
+	[ ! -f ${DEBUG} ] && $1 ||  $1 &>/dev/null
 }
 
 checkRequirements
